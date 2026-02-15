@@ -161,7 +161,7 @@ export function CGPACalculator() {
                 />
               </svg>
               <p className="text-center text-gray-700 dark:text-gray-300">
-                No semesters added yet. Click '+ Add Semester' to begin.
+                No semesters added yet. Click {"'+ Add Semester'"} to begin.
               </p>
             </div>
         ) : (

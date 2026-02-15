@@ -193,7 +193,7 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
               />
             </svg>
             <p className="text-center text-gray-700 dark:text-gray-300">
-              No subjects added yet. Click '+ Add Subject' to begin.
+              No subjects added yet. Click {"'+ Add Subject'"} to begin.
             </p>
           </div>
         ) : (
