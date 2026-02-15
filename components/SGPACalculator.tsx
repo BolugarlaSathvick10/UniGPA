@@ -280,6 +280,7 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <input
                       type="number"
+                      inputMode="decimal"
                       placeholder="Credits"
                       value={subject.credits || ''}
                       onChange={(e) => {
@@ -289,7 +290,8 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
                         }
                       }}
                       min="0"
-                      step="0.5"
+                      step="any"
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="px-3 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <select

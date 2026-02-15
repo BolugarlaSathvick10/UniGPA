@@ -248,6 +248,7 @@ export function CGPACalculator() {
                 />
                 <input
                   type="number"
+                  inputMode="decimal"
                   placeholder="SGPA"
                   value={semester.sgpa || ''}
                   onChange={(e) => {
@@ -258,13 +259,15 @@ export function CGPACalculator() {
                   }}
                   min="0"
                   max="10"
-                  step="0.01"
+                  step="any"
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="px-3 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {mode === 'accurate' && (
                   <div className="w-full">
                     <input
                       type="number"
+                      inputMode="decimal"
                       placeholder="Effective Credits"
                       value={semester.effectiveCredits || ''}
                       onChange={(e) => {
@@ -274,7 +277,8 @@ export function CGPACalculator() {
                         }
                       }}
                       min="0"
-                      step="0.5"
+                      step="any"
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="px-3 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {mode === 'accurate' && (semester.effectiveCredits === 0 || semester.effectiveCredits === null) && (
