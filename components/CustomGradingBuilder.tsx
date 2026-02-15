@@ -16,33 +16,32 @@ export function CustomGradingBuilder({ grades, onChange }: CustomGradingBuilderP
   const addGrade = () => {
     const trimmedLabel = label.trim();
     const pointsValue = Number(points);
-    
-    // Validation
+
     if (!trimmedLabel) {
       alert('Please enter a grade label');
       return;
     }
-    
+
     if (!points.trim() || isNaN(pointsValue)) {
       alert('Please enter a valid number for points');
       return;
     }
-    
+
     if (pointsValue < 0) {
       alert('Points cannot be negative');
       return;
     }
-    
-    // Check for duplicate labels
+
     if (grades.some(g => g.label.toLowerCase() === trimmedLabel.toLowerCase())) {
       alert('This grade label already exists');
       return;
     }
-    
+
     const newGrade: Grade = {
       label: trimmedLabel,
       points: pointsValue,
     };
+
     onChange([...grades, newGrade]);
     setLabel('');
     setPoints('');
@@ -57,28 +56,31 @@ export function CustomGradingBuilder({ grades, onChange }: CustomGradingBuilderP
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="glass-card p-6 overflow-hidden"
+      className="glass-card p-6 overflow-hidden w-full"
     >
       <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
         Custom Grading System
       </h3>
 
-      <div className="flex gap-3 mb-4">
+      {/* 🔥 RESPONSIVE FIX APPLIED HERE */}
+      <div className="flex flex-col md:flex-row gap-3 mb-4 w-full">
         <input
           type="text"
           placeholder="Grade Label (e.g., A+)"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          className="flex-1 px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full md:flex-1 px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+
         <input
           type="number"
           placeholder="Points"
           value={points}
           onChange={(e) => setPoints(e.target.value)}
           step="0.1"
-          className="w-32 px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full md:w-32 px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -88,7 +90,7 @@ export function CustomGradingBuilder({ grades, onChange }: CustomGradingBuilderP
               addGrade();
             }
           }}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          className="w-full md:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
         >
           Add
         </motion.button>
@@ -105,6 +107,7 @@ export function CustomGradingBuilder({ grades, onChange }: CustomGradingBuilderP
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
               Custom Grades:
             </p>
+
             {grades.map((grade, index) => (
               <motion.div
                 key={index}
@@ -116,6 +119,7 @@ export function CustomGradingBuilder({ grades, onChange }: CustomGradingBuilderP
                 <span className="text-gray-800 dark:text-gray-200">
                   {grade.label} - {grade.points} points
                 </span>
+
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -132,4 +136,3 @@ export function CustomGradingBuilder({ grades, onChange }: CustomGradingBuilderP
     </motion.div>
   );
 }
-
