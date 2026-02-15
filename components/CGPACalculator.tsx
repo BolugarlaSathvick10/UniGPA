@@ -18,6 +18,7 @@ export function CGPACalculator() {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [cgpa, setCgpa] = useState<number | null>(null);
   const [totalCredits, setTotalCredits] = useState(0);
+  const [mode, setMode] = useState<'quick' | 'accurate'>('quick');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -32,35 +33,61 @@ export function CGPACalculator() {
       }));
       setSemesters(migrated);
     }
+
+    const savedMode = loadFromStorage<'quick' | 'accurate'>(STORAGE_KEYS.CGPA_MODE, 'quick');
+    setMode(savedMode);
   }, []);
 
-  // Save to localStorage whenever semesters change
+  // Save to localStorage whenever semesters or mode change
   useEffect(() => {
     if (semesters.length > 0) {
       saveToStorage(STORAGE_KEYS.CGPA_SEMESTERS, semesters);
     }
   }, [semesters]);
 
-  // Calculate CGPA using effective credits
-  // CGPA = Σ(SGPA × effectiveCredits) / Σ(effectiveCredits)
   useEffect(() => {
-    let totalPoints = 0;
-    let totalEffectiveCreds = 0;
+    saveToStorage(STORAGE_KEYS.CGPA_MODE, mode);
+  }, [mode]);
 
-    semesters.forEach((semester) => {
-      if (semester.effectiveCredits > 0 && semester.sgpa >= 0) {
-        totalPoints += semester.sgpa * semester.effectiveCredits;
-        totalEffectiveCreds += semester.effectiveCredits;
+  // Calculate CGPA depending on mode
+  useEffect(() => {
+    if (mode === 'accurate') {
+      let totalPoints = 0;
+      let totalEffectiveCreds = 0;
+
+      semesters.forEach((semester) => {
+        if (semester.effectiveCredits > 0 && semester.sgpa >= 0) {
+          totalPoints += semester.sgpa * semester.effectiveCredits;
+          totalEffectiveCreds += semester.effectiveCredits;
+        }
+      });
+
+      setTotalCredits(totalEffectiveCreds);
+      if (totalEffectiveCreds > 0) {
+        setCgpa(roundToTwoDecimals(totalPoints / totalEffectiveCreds));
+      } else {
+        // credits missing, fall back to simple average so calculation isn't blocked
+        const valid = semesters.filter(s => s.sgpa >= 0);
+        if (valid.length > 0) {
+          const sum = valid.reduce((acc, s) => acc + s.sgpa, 0);
+          setCgpa(roundToTwoDecimals(sum / valid.length));
+        } else {
+          setCgpa(null);
+        }
       }
-    });
-
-    setTotalCredits(totalEffectiveCreds);
-    if (totalEffectiveCreds > 0) {
-      setCgpa(roundToTwoDecimals(totalPoints / totalEffectiveCreds));
     } else {
-      setCgpa(null);
+      // quick estimate: simple average of SGPAs
+      const valid = semesters.filter(s => s.sgpa >= 0);
+      const count = valid.length;
+      if (count > 0) {
+        const sum = valid.reduce((acc, s) => acc + s.sgpa, 0);
+        setCgpa(roundToTwoDecimals(sum / count));
+      } else {
+        setCgpa(null);
+      }
+      setTotalCredits(0);
     }
-  }, [semesters]);
+  }, [semesters, mode]);
 
   const addSemester = () => {
     const newSemester: Semester = {
@@ -86,8 +113,10 @@ export function CGPACalculator() {
     setSemesters([]);
     setCgpa(null);
     setTotalCredits(0);
+    setMode('quick');
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.CGPA_SEMESTERS);
+      localStorage.removeItem(STORAGE_KEYS.CGPA_MODE);
     }
   };
 
@@ -103,6 +132,7 @@ export function CGPACalculator() {
         semesters: chartData,
         cgpa: cgpa || 0,
         totalCredits,
+        mode,
       },
       gradingSystem: 'CGPA Calculation',
     });
@@ -144,6 +174,40 @@ export function CGPACalculator() {
         </div>
       </div>
 
+        {/* calculation mode toggle */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Calculation Mode:
+          </label>
+          <div className="flex items-center space-x-4">
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="cgpaMode"
+                value="quick"
+                checked={mode === 'quick'}
+                onChange={() => setMode('quick')}
+                className="form-radio h-4 w-4 text-blue-600"
+              />
+              <span className="ml-2 text-sm">Quick Estimate (Simple Average)</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="cgpaMode"
+                value="accurate"
+                checked={mode === 'accurate'}
+                onChange={() => setMode('accurate')}
+                className="form-radio h-4 w-4 text-blue-600"
+              />
+              <span className="ml-2 text-sm">Accurate (Credit Weighted)</span>
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Quick Estimate assumes equal semester credits.
+          </p>
+        </div>
+
         <div className="space-y-4 mb-6">
           {semesters.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400">
@@ -174,7 +238,7 @@ export function CGPACalculator() {
               exit={{ opacity: 0, x: 20 }}
               className="p-4 rounded-2xl bg-white/30 dark:bg-black/20 border border-white/30 dark:border-white/10"
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className={`grid grid-cols-1 ${mode === 'accurate' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3`}>
                 <input
                   type="text"
                   placeholder="Semester Name"
@@ -197,20 +261,29 @@ export function CGPACalculator() {
                   step="0.01"
                   className="px-3 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <input
-                  type="number"
-                  placeholder="Effective Credits"
-                  value={semester.effectiveCredits || ''}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    if (value >= 0) {
-                      updateSemester(semester.id, 'effectiveCredits', value || 0);
-                    }
-                  }}
-                  min="0"
-                  step="0.5"
-                  className="px-3 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                {mode === 'accurate' && (
+                  <div className="w-full">
+                    <input
+                      type="number"
+                      placeholder="Effective Credits"
+                      value={semester.effectiveCredits || ''}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (value >= 0) {
+                          updateSemester(semester.id, 'effectiveCredits', value || 0);
+                        }
+                      }}
+                      min="0"
+                      step="0.5"
+                      className="px-3 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {mode === 'accurate' && (semester.effectiveCredits === 0 || semester.effectiveCredits === null) && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Enter effective credits for accurate calculation.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

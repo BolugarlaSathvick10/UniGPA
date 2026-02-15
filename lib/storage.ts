@@ -3,6 +3,8 @@
 export const STORAGE_KEYS = {
   SGPA_SUBJECTS: 'unigpa_sgpa_subjects',
   CGPA_SEMESTERS: 'unigpa_cgpa_semesters',
+  CGPA_MODE: 'unigpa_cgpa_mode',
+  SGPA_ADVANCED: 'unigpa_sgpa_advanced',
   GRADING_SYSTEM: 'unigpa_grading_system',
   CUSTOM_GRADES: 'unigpa_custom_grades',
 } as const;

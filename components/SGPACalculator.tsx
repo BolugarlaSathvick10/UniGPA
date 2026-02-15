@@ -26,6 +26,8 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
   const [totalRegisteredCredits, setTotalRegisteredCredits] = useState(0);
   const [mandatoryCredits, setMandatoryCredits] = useState(0);
   const [effectiveCredits, setEffectiveCredits] = useState(0);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [excludeMandatory, setExcludeMandatory] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -41,17 +43,24 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
       });
       setSubjects(migrated);
     }
+
+    const savedAdv = loadFromStorage<boolean>(STORAGE_KEYS.SGPA_ADVANCED, false);
+    setExcludeMandatory(savedAdv);
   }, []);
 
-  // Save to localStorage whenever subjects change
+  // Save to localStorage whenever subjects or advanced option change
   useEffect(() => {
     if (subjects.length > 0) {
       saveToStorage(STORAGE_KEYS.SGPA_SUBJECTS, subjects);
     }
   }, [subjects]);
 
-  // Calculate SGPA - only includes non-starred subjects
-  // SGPA = Σ(C × GP of non-starred subjects) / Σ(C of non-starred subjects)
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.SGPA_ADVANCED, excludeMandatory);
+  }, [excludeMandatory]);
+
+  // Calculate SGPA - optionally exclude mandatory subjects
+  // SGPA = Σ(C × GP of included subjects) / Σ(C of included subjects)
   useEffect(() => {
     const grades = getGradesForSystem(gradingSystem, customGrades);
     const gradeMap = new Map(grades.map(g => [g.label, g.points]));
@@ -63,14 +72,13 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
 
     subjects.forEach((subject) => {
       registeredCreds += subject.credits || 0;
-      
-      // Count mandatory credits
+
       if (subject.isStarred) {
         mandatoryCreds += subject.credits || 0;
       }
-      
-      // Only include non-starred subjects in SGPA calculation
-      if (!subject.isStarred && subject.credits > 0 && subject.grade) {
+
+      const isExcluded = excludeMandatory && subject.isStarred;
+      if (!isExcluded && subject.credits > 0 && subject.grade) {
         const gradePoints = gradeMap.get(subject.grade) || 0;
         totalPoints += subject.credits * gradePoints;
         totalCreds += subject.credits;
@@ -80,19 +88,16 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
     setTotalRegisteredCredits(registeredCreds);
     setMandatoryCredits(mandatoryCreds);
     setEffectiveCredits(totalCreds);
-    
+
     // Calculate SGPA
     if (subjects.length === 0) {
-      // No subjects: don't show result
       setSgpa(null);
     } else if (totalCreds > 0) {
-      // Has effective credits: calculate SGPA
       setSgpa(roundToTwoDecimals(totalPoints / totalCreds));
     } else {
-      // Has subjects but no effective credits (all starred): return 0
       setSgpa(0);
     }
-  }, [subjects, gradingSystem, customGrades]);
+  }, [subjects, gradingSystem, customGrades, excludeMandatory]);
 
   const addSubject = () => {
     const newSubject: Subject = {
@@ -120,8 +125,11 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
     setTotalRegisteredCredits(0);
     setMandatoryCredits(0);
     setEffectiveCredits(0);
+    setExcludeMandatory(false);
+    setIsAdvancedOpen(false);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.SGPA_SUBJECTS);
+      localStorage.removeItem(STORAGE_KEYS.SGPA_ADVANCED);
     }
   };
 
@@ -140,6 +148,7 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
         totalCredits: totalRegisteredCredits,
         effectiveCredits,
         mandatoryCredits,
+        excludeMandatory,
       },
       gradingSystem: gradingSystemLabel || gradingSystem,
     });
@@ -174,6 +183,59 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
             Reset
           </motion.button>
         </div>
+      </div>
+
+      {/* advanced options */}
+      <div className="mb-4 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-white/30 dark:bg-black/20">
+        <button
+          onClick={() => setIsAdvancedOpen((o) => !o)}
+          className="w-full flex justify-between items-center text-left"
+        >
+          <span className="text-base font-semibold text-gray-800 dark:text-gray-200">
+            Advanced Options
+          </span>
+          <motion.svg
+            animate={{ rotate: isAdvancedOpen ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+            className="w-5 h-5 text-gray-600 dark:text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </motion.svg>
+        </button>
+        <motion.div
+          initial={false}
+          animate={{
+            height: isAdvancedOpen ? 'auto' : 0,
+            opacity: isAdvancedOpen ? 1 : 0,
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden mt-3"
+        >
+          <div className="space-y-2">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={excludeMandatory}
+                onChange={(e) => setExcludeMandatory(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                Exclude Mandatory Subjects
+              </span>
+            </label>
+            <p className="text-xs text-gray-500">
+              Enable this if your university excludes mandatory courses from GPA calculation.
+            </p>
+          </div>
+        </motion.div>
       </div>
 
       <div className="space-y-4 mb-6">
@@ -251,21 +313,23 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
                       Remove
                     </motion.button>
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`starred-${subject.id}`}
-                      checked={subject.isStarred}
-                      onChange={(e) => updateSubject(subject.id, 'isStarred', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                    />
-                    <label
-                      htmlFor={`starred-${subject.id}`}
-                      className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-                    >
-                      Mandatory (*) Subject
-                    </label>
-                  </div>
+                  {excludeMandatory && (
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`starred-${subject.id}`}
+                        checked={subject.isStarred}
+                        onChange={(e) => updateSubject(subject.id, 'isStarred', e.target.checked)}
+                        className="w-4 h-4 text-blue-600 bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <label
+                        htmlFor={`starred-${subject.id}`}
+                        className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        Mandatory (*) Subject
+                      </label>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );

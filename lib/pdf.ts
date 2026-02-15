@@ -7,11 +7,13 @@ export interface PDFData {
     totalCredits: number;
     effectiveCredits?: number;
     mandatoryCredits?: number;
+    excludeMandatory?: boolean;
   };
   cgpa?: {
     semesters: Array<{ semester: string; sgpa: number; credits: number }>;
     cgpa: number;
     totalCredits: number;
+    mode?: 'quick' | 'accurate';
   };
   gradingSystem: string;
 }
@@ -34,6 +36,14 @@ export async function exportToPDF(data: PDFData): Promise<void> {
   doc.setFontSize(12);
   doc.text(`Grading System: ${data.gradingSystem}`, 20, yPos);
   yPos += 10;
+  if (data.cgpa?.mode) {
+    doc.text(`CGPA Mode: ${data.cgpa.mode}`, 20, yPos);
+    yPos += 8;
+  }
+  if (data.sgpa?.excludeMandatory !== undefined) {
+    doc.text(`Exclude Mandatory Subjects: ${data.sgpa.excludeMandatory ? 'Yes' : 'No'}`, 20, yPos);
+    yPos += 8;
+  }
 
   // SGPA Section
   if (data.sgpa) {
