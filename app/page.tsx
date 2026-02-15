@@ -10,32 +10,11 @@ import { Footer } from '@/components/Footer';
 import { CalculationInfo } from '@/components/CalculationInfo';
 import { useState, useEffect } from 'react';
 import { GradingSystem } from '@/types/grading';
-import { saveToStorage, loadFromStorage, STORAGE_KEYS } from '@/lib/storage';
 import { Grade } from '@/types/grading';
 
 export default function Home() {
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>('10-point');
   const [customGrades, setCustomGrades] = useState<Grade[]>([]);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const savedSystem = loadFromStorage<GradingSystem>(STORAGE_KEYS.GRADING_SYSTEM, '10-point');
-    const savedCustomGrades = loadFromStorage<Grade[]>(STORAGE_KEYS.CUSTOM_GRADES, []);
-    setGradingSystem(savedSystem);
-    setCustomGrades(savedCustomGrades);
-  }, []);
-
-  // Save grading system to localStorage
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.GRADING_SYSTEM, gradingSystem);
-  }, [gradingSystem]);
-
-  // Save custom grades to localStorage
-  useEffect(() => {
-    if (gradingSystem === 'custom') {
-      saveToStorage(STORAGE_KEYS.CUSTOM_GRADES, customGrades);
-    }
-  }, [customGrades, gradingSystem]);
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-4xl relative">

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { roundToTwoDecimals } from '@/lib/utils';
-import { saveToStorage, loadFromStorage, STORAGE_KEYS } from '@/lib/storage';
 import { exportToPDF } from '@/lib/pdf';
 
 interface Semester {
@@ -19,35 +18,6 @@ export function CGPACalculator() {
   const [cgpa, setCgpa] = useState<number | null>(null);
   const [totalCredits, setTotalCredits] = useState(0);
   const [mode, setMode] = useState<'quick' | 'accurate'>('quick');
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = loadFromStorage<any[]>(STORAGE_KEYS.CGPA_SEMESTERS, []);
-    if (saved.length > 0) {
-      // Migrate old data: convert 'credits' to 'effectiveCredits' if needed
-      const migrated = saved.map((semester) => ({
-        ...semester,
-        effectiveCredits: semester.effectiveCredits !== undefined 
-          ? semester.effectiveCredits 
-          : (semester.credits || 0),
-      }));
-      setSemesters(migrated);
-    }
-
-    const savedMode = loadFromStorage<'quick' | 'accurate'>(STORAGE_KEYS.CGPA_MODE, 'quick');
-    setMode(savedMode);
-  }, []);
-
-  // Save to localStorage whenever semesters or mode change
-  useEffect(() => {
-    if (semesters.length > 0) {
-      saveToStorage(STORAGE_KEYS.CGPA_SEMESTERS, semesters);
-    }
-  }, [semesters]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.CGPA_MODE, mode);
-  }, [mode]);
 
   // Calculate CGPA depending on mode
   useEffect(() => {
@@ -114,10 +84,6 @@ export function CGPACalculator() {
     setCgpa(null);
     setTotalCredits(0);
     setMode('quick');
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEYS.CGPA_SEMESTERS);
-      localStorage.removeItem(STORAGE_KEYS.CGPA_MODE);
-    }
   };
 
   const handleExportPDF = async () => {

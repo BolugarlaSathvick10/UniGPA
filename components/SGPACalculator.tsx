@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GradingSystem, getGradesForSystem, Grade } from '@/types/grading';
 import { roundToTwoDecimals } from '@/lib/utils';
-import { saveToStorage, loadFromStorage, STORAGE_KEYS } from '@/lib/storage';
 import { exportToPDF } from '@/lib/pdf';
 
 interface Subject {
@@ -28,36 +27,6 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
   const [effectiveCredits, setEffectiveCredits] = useState(0);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [excludeMandatory, setExcludeMandatory] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = loadFromStorage<Subject[]>(STORAGE_KEYS.SGPA_SUBJECTS, []);
-    if (saved.length > 0) {
-      // Migrate old data: add isStarred field if missing, remove name if present
-      const migrated = saved.map((subject) => {
-        const { name, ...rest } = subject as any;
-        return {
-          ...rest,
-          isStarred: subject.isStarred !== undefined ? subject.isStarred : false,
-        };
-      });
-      setSubjects(migrated);
-    }
-
-    const savedAdv = loadFromStorage<boolean>(STORAGE_KEYS.SGPA_ADVANCED, false);
-    setExcludeMandatory(savedAdv);
-  }, []);
-
-  // Save to localStorage whenever subjects or advanced option change
-  useEffect(() => {
-    if (subjects.length > 0) {
-      saveToStorage(STORAGE_KEYS.SGPA_SUBJECTS, subjects);
-    }
-  }, [subjects]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.SGPA_ADVANCED, excludeMandatory);
-  }, [excludeMandatory]);
 
   // Calculate SGPA - optionally exclude mandatory subjects
   // SGPA = Σ(C × GP of included subjects) / Σ(C of included subjects)
@@ -127,10 +96,6 @@ export function SGPACalculator({ gradingSystem, customGrades, gradingSystemLabel
     setEffectiveCredits(0);
     setExcludeMandatory(false);
     setIsAdvancedOpen(false);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEYS.SGPA_SUBJECTS);
-      localStorage.removeItem(STORAGE_KEYS.SGPA_ADVANCED);
-    }
   };
 
   const handleExportPDF = async () => {
